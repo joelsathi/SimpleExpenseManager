@@ -29,6 +29,16 @@ public class PersistentMemoryTransactionDAO implements TransactionDAO {
     @Override
     public void logTransaction(Date date, String accountNo, ExpenseType expenseType, double amount) {
         myDB = helper.getWritableDatabase();
+
+        Cursor cursor = myDB.query("userInfo",
+                new String[] {"balance"},
+                "accountNo = ?",
+                new String[] {accountNo},
+                null, null, null);
+
+        cursor.moveToFirst();
+        double curBalance = cursor.getDouble(cursor.getColumnIndex("balance"));
+
         DateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy");
 
         ContentValues contentValues = new ContentValues();
@@ -37,7 +47,11 @@ public class PersistentMemoryTransactionDAO implements TransactionDAO {
         contentValues.put("transactionDate", dateFormat.format(date));
         contentValues.put("amount", amount);
 
-        myDB.insert("Transactions", null, contentValues);
+        if ( ! (expenseType == ExpenseType.EXPENSE && curBalance < amount) ){
+            myDB.insert("Transactions", null, contentValues);
+        }
+
+        cursor.close();
         myDB.close();
     }
 
@@ -65,32 +79,15 @@ public class PersistentMemoryTransactionDAO implements TransactionDAO {
         }
 
         cursor.close();
+        myDB.close();
         return transactions;
     }
 
     @Override
     public List<Transaction> getPaginatedTransactionLogs(int limit) throws ParseException {
-        myDB = helper.getReadableDatabase();
+        List<Transaction> transactions = getAllTransactionLogs();
 
-        String[] projection = {"accountNo", "expenseType", "transactionDate", "amount"};
-
-        Cursor cursor = myDB.query("Transactions", projection, null, null, null, null, null);
-
-        List<Transaction> transactions = new ArrayList<Transaction>();
-
-        int length = cursor.getCount();
-        while (cursor.moveToNext()){
-            String accNo = cursor.getString(cursor.getColumnIndex(projection[0]));
-            String expenseType = cursor.getString(cursor.getColumnIndex(projection[1]));
-            String transDate = cursor.getString(cursor.getColumnIndex(projection[2]));
-            double amount = cursor.getDouble(cursor.getColumnIndex(projection[3]));
-
-            Date curDate = new SimpleDateFormat("dd-MM-yyyy").parse(transDate);
-            ExpenseType curExpense = ExpenseType.valueOf(expenseType);
-
-            Transaction transaction = new Transaction(curDate, accNo, curExpense, amount);
-            transactions.add(transaction);
-        }
+        int length = transactions.size();
 
         if (length <= limit){
             return transactions;

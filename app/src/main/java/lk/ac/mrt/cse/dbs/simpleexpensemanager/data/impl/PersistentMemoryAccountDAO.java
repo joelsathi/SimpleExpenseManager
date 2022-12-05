@@ -47,6 +47,7 @@ public class PersistentMemoryAccountDAO implements AccountDAO {
         }
 
         cursor.close();
+        myDB.close();
         return accountNumbers;
     }
 
@@ -71,6 +72,7 @@ public class PersistentMemoryAccountDAO implements AccountDAO {
         }
 
         cursor.close();
+        myDB.close();
         return accounts;
     }
 
@@ -86,6 +88,8 @@ public class PersistentMemoryAccountDAO implements AccountDAO {
         Cursor cursor = myDB.query("userInfo", projection, selection, selectionArgs, null, null, null);
 
         if (cursor == null){
+            cursor.close();
+            myDB.close();
             String msg = "Account " + accountNo + " is invalid.";
             throw new InvalidAccountException(msg);
         }
@@ -97,6 +101,8 @@ public class PersistentMemoryAccountDAO implements AccountDAO {
             double balance = cursor.getDouble(cursor.getColumnIndex(projection[3]));
 
             Account newAccount = new Account(accNo, bankName, accHolder, balance);
+            cursor.close();
+            myDB.close();
             return  newAccount;
         }
     }
@@ -119,20 +125,20 @@ public class PersistentMemoryAccountDAO implements AccountDAO {
     public void removeAccount(String accountNo) throws InvalidAccountException {
         // If there is no such account
         myDB = helper.getWritableDatabase();
-//        Cursor cursor = myDB.query("accountNo",
-//                new String[] {"accountNo", "bankName", "accountHolderName", "balance"},
-//                "accountNo = ?",
-//                new String[] {accountNo},
-//                null, null, null);
-//
-//        if (cursor == null){
-//            String msg = "Account " + accountNo + " is invalid.";
-//            throw new InvalidAccountException(msg);
-//        }
+        Cursor cursor = myDB.query("accountNo",
+                new String[] {"accountNo", "bankName", "accountHolderName", "balance"},
+                "accountNo = ?",
+                new String[] {accountNo},
+                null, null, null);
+
+        if (cursor == null){
+            String msg = "Account " + accountNo + " is invalid.";
+            throw new InvalidAccountException(msg);
+        }
 
         // When the accountNo is present, then delete it
         myDB.delete("UserInfo", "accountNo = ?", new String[] {accountNo});
-//        cursor.close();
+        cursor.close();
         myDB.close();
     }
 
@@ -163,9 +169,11 @@ public class PersistentMemoryAccountDAO implements AccountDAO {
         else{
             curBalance += amount;
         }
-        contentValues.put("balance", curBalance);
 
-        myDB.update("UserInfo", contentValues, "accountNo = ?", new String[] {accountNo});
+        if (curBalance > 0){
+            contentValues.put("balance", curBalance);
+            myDB.update("UserInfo", contentValues, "accountNo = ?", new String[] {accountNo});
+        }
 
         cursor.close();
         myDB.close();

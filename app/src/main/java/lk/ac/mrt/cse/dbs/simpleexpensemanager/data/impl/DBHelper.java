@@ -13,7 +13,7 @@ public class DBHelper extends SQLiteOpenHelper {
 
     @Override
     public void onCreate(SQLiteDatabase myDB) {
-        myDB.execSQL("CREATE TABLE userInfo( accountNo TEXT PRIMARY KEY, bankName TEXT NOT NULL, accountHolderName TEXT NOT NULL, balance REAL NOT NULL)");
+        myDB.execSQL("CREATE TABLE userInfo( accountNo TEXT PRIMARY KEY, bankName TEXT NOT NULL, accountHolderName TEXT NOT NULL, balance REAL NOT NULL CHECK(balance > 0))");
         myDB.execSQL("CREATE TABLE Transactions( ID INTEGER PRIMARY KEY AUTOINCREMENT, accountNo TEXT, expenseType TEXT, transactionDate DATE, amount REAL, FOREIGN KEY (accountNo) REFERENCES userInfo(accountNo) ON DELETE CASCADE)");
     }
 
